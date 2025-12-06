@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atr-stops-v1';
+const CACHE_NAME = 'atr-stops-v2';
 const urlsToCache = [
   '/',
   '/index.html',
