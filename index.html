@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ATR Stops">
+    <meta name="theme-color" content="#131722">
+    <meta name="description" content="Calculate volatility-adjusted stop loss levels using ATR">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <title>ATR Stop Loss Calculator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #131722;
+            color: #d1d4dc;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        html {
+            height: -webkit-fill-available;
+        }
+
+        .container {
+            background: #1e222d;
+            border-radius: 12px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: #787b86;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .label-hint {
+            font-size: 0.7rem;
+            color: #4a4e59;
+            font-style: italic;
+            text-transform: none;
+            letter-spacing: 0;
+            display: block;
+            margin-top: 2px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px; /* Prevents iOS zoom */
+            background: #131722;
+            border: 1px solid #363a45;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #2962ff;
+        }
+
+        input::placeholder {
+            color: #4a4e59;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: #131722;
+            border: 1px solid #363a45;
+            border-radius: 8px;
+            color: #787b86;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active.long {
+            background: rgba(38, 166, 154, 0.15);
+            border-color: #26a69a;
+            color: #26a69a;
+        }
+
+        .toggle-btn.active.short {
+            background: rgba(242, 54, 69, 0.15);
+            border-color: #f23645;
+            color: #f23645;
+        }
+
+        button.calculate {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: #2962ff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 4px;
+        }
+
+        button.calculate:hover {
+            background: #1e53e4;
+        }
+
+        button.calculate:active {
+            background: #1849c4;
+        }
+
+        .results {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results-header {
+            font-size: 0.8rem;
+            color: #787b86;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #363a45;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #262932;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .multiplier {
+            font-size: 0.85rem;
+            color: #787b86;
+            white-space: nowrap;
+        }
+
+        .stop-details {
+            text-align: right;
+        }
+
+        .stop-price {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f23645;
+        }
+
+        .stop-price.short {
+            color: #26a69a;
+        }
+
+        .stop-meta {
+            font-size: 0.75rem;
+            color: #787b86;
+            margin-top: 3px;
+        }
+
+        .distance {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            background: #262932;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .distance.tight {
+            background: rgba(242, 54, 69, 0.2);
+            color: #f23645;
+        }
+
+        .distance.ok {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .distance.safe {
+            background: rgba(38, 166, 154, 0.2);
+            color: #26a69a;
+        }
+
+        .summary-box {
+            margin-top: 16px;
+            padding: 14px;
+            background: #262932;
+            border-radius: 8px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .summary-label {
+            color: #787b86;
+        }
+
+        .summary-value {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .note {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(41, 98, 255, 0.1);
+            border-left: 3px solid #2962ff;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #787b86;
+            line-height: 1.5;
+        }
+
+        .clear-btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: transparent;
+            color: #787b86;
+            border: 1px solid #363a45;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            border-color: #787b86;
+            color: #d1d4dc;
+        }
+
+        /* Hide number input spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATR Stop Loss</h1>
+        
+        <div class="toggle-group">
+            <button class="toggle-btn long active" onclick="setDirection('long')">Long</button>
+            <button class="toggle-btn short" onclick="setDirection('short')">Short</button>
+        </div>
+
+        <div class="input-group">
+            <label>
+                Anchor Level ($)
+                <span class="label-hint" id="anchorHint">Swing low / support for longs</span>
+            </label>
+            <input type="number" id="anchorPrice" placeholder="177.00" step="0.01" inputmode="decimal">
+        </div>
+
+        <div class="input-group">
+            <label>ATR (14)</label>
+            <input type="number" id="atr" placeholder="15.47" step="0.01" inputmode="decimal">
+        </div>
+
+        <div class="input-group">
+            <label>
+                Current Price ($)
+                <span class="label-hint">For distance calculations</span>
+            </label>
+            <input type="number" id="currentPrice" placeholder="176.00" step="0.01" inputmode="decimal">
+        </div>
+
+        <button class="calculate" onclick="calculate()">Calculate</button>
+
+        <div class="results" id="results">
+            <div class="results-header" id="resultsHeader">Stop Levels</div>
+            <div id="stopLevels"></div>
+            
+            <div class="summary-box" id="summaryBox" style="display: none;">
+                <div class="summary-row">
+                    <span class="summary-label">Current to Anchor</span>
+                    <span class="summary-value" id="currentToAnchor">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">ATR as % of Price</span>
+                    <span class="summary-value" id="atrPct">—</span>
+                </div>
+            </div>
+
+            <div class="note" id="note"></div>
+
+            <button class="clear-btn" onclick="clearAll()">Clear</button>
+        </div>
+    </div>
+
+    <script>
+        let direction = 'long';
+
+        function setDirection(dir) {
+            direction = dir;
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.toggle-btn.${dir}`).classList.add('active');
+            
+            document.getElementById('anchorHint').textContent = 
+                dir === 'long' ? 'Swing low / support for longs' : 'Swing high / resistance for shorts';
+        }
+
+        function calculate() {
+            const anchor = parseFloat(document.getElementById('anchorPrice').value);
+            const atr = parseFloat(document.getElementById('atr').value);
+            const current = parseFloat(document.getElementById('currentPrice').value);
+
+            if (!anchor || !atr) {
+                alert('Enter anchor level and ATR');
+                return;
+            }
+
+            const multipliers = [1, 1.5, 2, 2.5, 3, 3.5];
+            let html = '';
+
+            multipliers.forEach(mult => {
+                const stopDistance = atr * mult;
+                let stopPrice, distanceFromCurrent, distancePct;
+
+                if (direction === 'long') {
+                    stopPrice = anchor - stopDistance;
+                    if (current) {
+                        distanceFromCurrent = current - stopPrice;
+                        distancePct = (distanceFromCurrent / current * 100);
+                    }
+                } else {
+                    stopPrice = anchor + stopDistance;
+                    if (current) {
+                        distanceFromCurrent = stopPrice - current;
+                        distancePct = (distanceFromCurrent / current * 100);
+                    }
+                }
+
+                let distanceClass = 'safe';
+                let distanceATR = current ? (Math.abs(distanceFromCurrent) / atr) : 0;
+                if (distanceATR < 1) distanceClass = 'tight';
+                else if (distanceATR < 1.5) distanceClass = 'ok';
+
+                const priceClass = direction === 'long' ? '' : 'short';
+
+                html += `
+                    <div class="result-row">
+                        <div class="multiplier">${mult}x ATR</div>
+                        <div class="stop-details">
+                            <div class="stop-price ${priceClass}">$${stopPrice.toFixed(2)}</div>
+                            <div class="stop-meta">
+                                $${stopDistance.toFixed(2)} buffer
+                                ${current ? `<span class="distance ${distanceClass}">${distancePct.toFixed(1)}% · $${distanceFromCurrent.toFixed(2)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('stopLevels').innerHTML = html;
+            document.getElementById('resultsHeader').textContent = 
+                direction === 'long' ? 'Stop Levels (below anchor)' : 'Stop Levels (above anchor)';
+            document.getElementById('results').classList.add('show');
+
+            const summaryBox = document.getElementById('summaryBox');
+            if (current) {
+                const currentToAnchor = direction === 'long' ? current - anchor : anchor - current;
+                const currentToAnchorPct = (currentToAnchor / current * 100).toFixed(1);
+                const atrPct = (atr / current * 100).toFixed(1);
+
+                document.getElementById('currentToAnchor').textContent = 
+                    `$${currentToAnchor.toFixed(2)} (${currentToAnchorPct}%)`;
+                document.getElementById('atrPct').textContent = `${atrPct}%`;
+                summaryBox.style.display = 'block';
+            } else {
+                summaryBox.style.display = 'none';
+            }
+
+            const noteEl = document.getElementById('note');
+            if (direction === 'long') {
+                noteEl.innerHTML = `<strong>Long:</strong> Stop below anchor. If price breaks support by your ATR buffer, structure is broken.`;
+            } else {
+                noteEl.innerHTML = `<strong>Short:</strong> Stop above anchor. If price breaks resistance by your ATR buffer, thesis invalidated.`;
+            }
+
+            // Scroll to results on mobile
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function clearAll() {
+            document.getElementById('anchorPrice').value = '';
+            document.getElementById('atr').value = '';
+            document.getElementById('currentPrice').value = '';
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('anchorPrice').focus();
+        }
+
+        // Calculate on Enter key
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    calculate();
+                }
+            });
+        });
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

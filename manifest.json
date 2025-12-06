@@ -1,0 +1,24 @@
+{
+  "name": "ATR Stop Loss Calculator",
+  "short_name": "ATR Stops",
+  "description": "Calculate volatility-adjusted stop loss levels",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#131722",
+  "theme_color": "#131722",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
