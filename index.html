@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     
-    <title>ATR Stop Loss Calculator</title>
+    <title>ATR % Calculator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -415,288 +415,78 @@
 </head>
 <body>
     <div class="container">
-        <div class="section-switcher">
-            <button class="section-btn active" onclick="switchSection('atr')">ATR Calculator</button>
-            <button class="section-btn" onclick="switchSection('pe')">PE Calculator</button>
-        </div>
+        <h1>ATR % Calculator</h1>
 
-        <!-- ATR Calculator Section -->
-        <div id="atrSection" class="calculator-section">
-            <h1>ATR Stop Loss</h1>
-
-            <div class="toggle-group">
-            <button class="toggle-btn long active" onclick="setDirection('long')">Long</button>
-            <button class="toggle-btn short" onclick="setDirection('short')">Short</button>
+        <div class="input-group">
+            <label>Stock Price ($)</label>
+            <input type="number" id="stockPrice" placeholder="90.00" step="0.01" inputmode="decimal">
         </div>
 
         <div class="input-group">
-            <label>
-                Anchor Level ($)
-                <span class="label-hint" id="anchorHint">Swing low / support for longs</span>
-            </label>
-            <input type="number" id="anchorPrice" placeholder="177.00" step="0.01" inputmode="decimal">
+            <label>ATR</label>
+            <input type="number" id="atr" placeholder="9.00" step="0.01" inputmode="decimal">
         </div>
 
-        <div class="input-group">
-            <label>ATR (14)</label>
-            <input type="number" id="atr" placeholder="15.47" step="0.01" inputmode="decimal">
-        </div>
-
-        <div class="input-group">
-            <label>
-                Current Price ($)
-                <span class="label-hint">For distance calculations</span>
-            </label>
-            <input type="number" id="currentPrice" placeholder="176.00" step="0.01" inputmode="decimal">
-        </div>
-
-        <button class="calculate" onclick="calculate()">Calculate</button>
+        <button class="calculate" onclick="calculate()">Calculate %</button>
 
         <div class="results" id="results">
-            <div class="results-header" id="resultsHeader">Stop Levels</div>
-            <div id="stopLevels"></div>
+            <div class="results-header">Result</div>
             
-            <div class="summary-box" id="summaryBox" style="display: none;">
-                <div class="summary-row">
-                    <span class="summary-label">Current to Anchor</span>
-                    <span class="summary-value" id="currentToAnchor">—</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">ATR as % of Price</span>
-                    <span class="summary-value" id="atrPct">—</span>
-                </div>
+            <div class="pe-result-box" style="margin-bottom: 0;">
+                <div class="pe-ratio-display" id="atrPctDisplay" style="color: #58a6ff;">—</div>
+                <div class="pe-interpretation" id="atrInterpretation">ATR as % of Stock Price</div>
             </div>
-
-            <div class="note" id="note"></div>
 
             <button class="clear-btn" onclick="clearAll()">Clear</button>
-        </div>
-        </div>
-
-        <!-- PE Calculator Section -->
-        <div id="peSection" class="calculator-section" style="display: none;">
-            <h1>P/E Ratio Calculator</h1>
-
-            <div class="input-group">
-                <label>Stock Price ($)</label>
-                <input type="number" id="stockPrice" placeholder="150.00" step="0.01" inputmode="decimal">
-            </div>
-
-            <div class="input-group">
-                <label>
-                    Earnings Per Share ($)
-                    <span class="label-hint">Annual EPS</span>
-                </label>
-                <input type="number" id="eps" placeholder="5.00" step="0.01" inputmode="decimal">
-            </div>
-
-            <button class="calculate" onclick="calculatePE()">Calculate P/E Ratio</button>
-
-            <div class="results" id="peResults">
-                <div class="results-header">P/E Ratio</div>
-
-                <div class="pe-result-box">
-                    <div class="pe-ratio-display" id="peRatioDisplay">—</div>
-                    <div class="pe-interpretation" id="peInterpretation"></div>
-                </div>
-
-                <div class="summary-box" id="peSummaryBox">
-                    <div class="summary-row">
-                        <span class="summary-label">Stock Price</span>
-                        <span class="summary-value" id="peStockPrice">—</span>
-                    </div>
-                    <div class="summary-row">
-                        <span class="summary-label">EPS (Annual)</span>
-                        <span class="summary-value" id="peEPS">—</span>
-                    </div>
-                    <div class="summary-row">
-                        <span class="summary-label">Earnings Yield</span>
-                        <span class="summary-value" id="earningsYield">—</span>
-                    </div>
-                </div>
-
-                <div class="note" id="peNote">
-                    <strong>P/E Ratio:</strong> Shows how much investors pay per dollar of earnings.
-                    Lower ratios may indicate undervaluation, while higher ratios suggest growth expectations or overvaluation.
-                </div>
-
-                <button class="clear-btn" onclick="clearPE()">Clear</button>
-            </div>
         </div>
     </div>
 
     <script>
-        let direction = 'long';
-
-        function setDirection(dir) {
-            direction = dir;
-            document.querySelectorAll('.toggle-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`.toggle-btn.${dir}`).classList.add('active');
-            
-            document.getElementById('anchorHint').textContent = 
-                dir === 'long' ? 'Swing low / support for longs' : 'Swing high / resistance for shorts';
-        }
-
         function calculate() {
-            const anchor = parseFloat(document.getElementById('anchorPrice').value);
+            const stockPrice = parseFloat(document.getElementById('stockPrice').value);
             const atr = parseFloat(document.getElementById('atr').value);
-            const current = parseFloat(document.getElementById('currentPrice').value);
 
-            if (!anchor || !atr) {
-                alert('Enter anchor level and ATR');
+            if (!stockPrice || !atr) {
+                alert('Enter both stock price and ATR');
                 return;
             }
 
-            const multipliers = [1, 1.5, 2, 2.5, 3, 3.5];
-            let html = '';
+            if (stockPrice <= 0) {
+                alert('Stock price must be greater than 0');
+                return;
+            }
 
-            multipliers.forEach(mult => {
-                const stopDistance = atr * mult;
-                let stopPrice, distanceFromCurrent, distancePct;
+            const atrPct = (atr / stockPrice) * 100;
 
-                if (direction === 'long') {
-                    stopPrice = anchor - stopDistance;
-                    if (current) {
-                        distanceFromCurrent = current - stopPrice;
-                        distancePct = (distanceFromCurrent / current * 100);
-                    }
-                } else {
-                    stopPrice = anchor + stopDistance;
-                    if (current) {
-                        distanceFromCurrent = stopPrice - current;
-                        distancePct = (distanceFromCurrent / current * 100);
-                    }
-                }
+            const displayEl = document.getElementById('atrPctDisplay');
+            displayEl.textContent = atrPct.toFixed(2) + '%';
 
-                let distanceClass = 'safe';
-                let distanceATR = current ? (Math.abs(distanceFromCurrent) / atr) : 0;
-                if (distanceATR < 1) distanceClass = 'tight';
-                else if (distanceATR < 1.5) distanceClass = 'ok';
+            // Visual feedback based on volatility
+            const interpretEl = document.getElementById('atrInterpretation');
+            interpretEl.classList.remove('low', 'moderate', 'high');
+            
+            if (atrPct < 2) {
+                displayEl.style.color = '#3fb950'; // Green - low vol
+                interpretEl.textContent = 'Low Volatility';
+                interpretEl.classList.add('low');
+            } else if (atrPct < 5) {
+                displayEl.style.color = '#d29922'; // Yellow - medium vol
+                interpretEl.textContent = 'Moderate Volatility';
+                interpretEl.classList.add('moderate');
+            } else {
+                displayEl.style.color = '#f85149'; // Red - high vol
+                interpretEl.textContent = 'High Volatility';
+                interpretEl.classList.add('high');
+            }
 
-                const priceClass = direction === 'long' ? '' : 'short';
-
-                html += `
-                    <div class="result-row">
-                        <div class="multiplier">${mult}x ATR</div>
-                        <div class="stop-details">
-                            <div class="stop-price ${priceClass}">$${stopPrice.toFixed(2)}</div>
-                            <div class="stop-meta">
-                                $${stopDistance.toFixed(2)} buffer
-                                ${current ? `<span class="distance ${distanceClass}">${distancePct.toFixed(1)}% · $${distanceFromCurrent.toFixed(2)}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            document.getElementById('stopLevels').innerHTML = html;
-            document.getElementById('resultsHeader').textContent = 
-                direction === 'long' ? 'Stop Levels (below anchor)' : 'Stop Levels (above anchor)';
             document.getElementById('results').classList.add('show');
-
-            const summaryBox = document.getElementById('summaryBox');
-            if (current) {
-                const currentToAnchor = direction === 'long' ? current - anchor : anchor - current;
-                const currentToAnchorPct = (currentToAnchor / current * 100).toFixed(1);
-                const atrPct = (atr / current * 100).toFixed(1);
-
-                document.getElementById('currentToAnchor').textContent = 
-                    `$${currentToAnchor.toFixed(2)} (${currentToAnchorPct}%)`;
-                document.getElementById('atrPct').textContent = `${atrPct}%`;
-                summaryBox.style.display = 'block';
-            } else {
-                summaryBox.style.display = 'none';
-            }
-
-            const noteEl = document.getElementById('note');
-            if (direction === 'long') {
-                noteEl.innerHTML = `<strong>Long:</strong> Stop below anchor. If price breaks support by your ATR buffer, structure is broken.`;
-            } else {
-                noteEl.innerHTML = `<strong>Short:</strong> Stop above anchor. If price breaks resistance by your ATR buffer, thesis invalidated.`;
-            }
-
-            // Scroll to results on mobile
             document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function clearAll() {
-            document.getElementById('anchorPrice').value = '';
-            document.getElementById('atr').value = '';
-            document.getElementById('currentPrice').value = '';
-            document.getElementById('results').classList.remove('show');
-            document.getElementById('anchorPrice').focus();
-        }
-
-        // Section Switcher
-        function switchSection(section) {
-            const atrSection = document.getElementById('atrSection');
-            const peSection = document.getElementById('peSection');
-            const buttons = document.querySelectorAll('.section-btn');
-
-            buttons.forEach(btn => btn.classList.remove('active'));
-
-            if (section === 'atr') {
-                atrSection.style.display = 'block';
-                peSection.style.display = 'none';
-                document.querySelector('.section-btn:first-child').classList.add('active');
-            } else {
-                atrSection.style.display = 'none';
-                peSection.style.display = 'block';
-                document.querySelector('.section-btn:last-child').classList.add('active');
-            }
-        }
-
-        // PE Calculator
-        function calculatePE() {
-            const stockPrice = parseFloat(document.getElementById('stockPrice').value);
-            const eps = parseFloat(document.getElementById('eps').value);
-
-            if (!stockPrice || !eps) {
-                alert('Enter both stock price and EPS');
-                return;
-            }
-
-            if (eps <= 0) {
-                alert('EPS must be greater than 0');
-                return;
-            }
-
-            const peRatio = stockPrice / eps;
-            const earningsYield = (eps / stockPrice * 100);
-
-            // Display PE Ratio
-            document.getElementById('peRatioDisplay').textContent = peRatio.toFixed(2);
-
-            // Interpretation
-            const interpretEl = document.getElementById('peInterpretation');
-            interpretEl.classList.remove('low', 'moderate', 'high');
-
-            if (peRatio < 15) {
-                interpretEl.textContent = 'Low P/E - Potentially Undervalued';
-                interpretEl.classList.add('low');
-            } else if (peRatio < 25) {
-                interpretEl.textContent = 'Moderate P/E - Market Average';
-                interpretEl.classList.add('moderate');
-            } else {
-                interpretEl.textContent = 'High P/E - Growth Stock or Overvalued';
-                interpretEl.classList.add('high');
-            }
-
-            // Summary
-            document.getElementById('peStockPrice').textContent = `$${stockPrice.toFixed(2)}`;
-            document.getElementById('peEPS').textContent = `$${eps.toFixed(2)}`;
-            document.getElementById('earningsYield').textContent = `${earningsYield.toFixed(2)}%`;
-
-            document.getElementById('peResults').classList.add('show');
-            document.getElementById('peResults').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        function clearPE() {
             document.getElementById('stockPrice').value = '';
-            document.getElementById('eps').value = '';
-            document.getElementById('peResults').classList.remove('show');
+            document.getElementById('atr').value = '';
+            document.getElementById('results').classList.remove('show');
             document.getElementById('stockPrice').focus();
         }
 
@@ -705,13 +495,7 @@
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    // Check which section is active
-                    const atrSection = document.getElementById('atrSection');
-                    if (atrSection.style.display !== 'none') {
-                        calculate();
-                    } else {
-                        calculatePE();
-                    }
+                    calculate();
                 }
             });
         });
